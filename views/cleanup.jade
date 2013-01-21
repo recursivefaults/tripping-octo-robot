@@ -1,0 +1,18 @@
+extends layout
+block content
+    table.table
+        thead
+            tr
+                th Post Title
+                th ID
+                th Date
+                th
+        tbody
+            each post in posts
+                tr(id="#{post.id}")
+                    td: a(href="#{post.post_url}") #{post.title}
+                    td #{post.id}
+                    td #{post.date}
+                    td: a(href="#").btn.delete Delete Post 
+
+    script(rel='text/javascript', src='/javascripts/deleter.js')

@@ -1,9 +1,11 @@
 doctype 5
 html
-  head
-    title= title
-    link(rel='stylesheet', href='/stylesheets/style.css')
-    link(rel='stylesheet', href='/stylesheets/bootstrap-min.css')
-    script(rel='text/javascript', href='/javascripts/bootstrap.min.js')
+    head
+        block head
+            title= title
+            link(rel='stylesheet', href='/stylesheets/style.css')
+            link(rel='stylesheet', href='/stylesheets/bootstrap.min.css')
+            script(rel='text/javascript', src='/javascripts/bootstrap.min.js')
+            script(rel='text/javascript', src='/javascripts/jquery-1.9.0.min.js')
   body
     block content

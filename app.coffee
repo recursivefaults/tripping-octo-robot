@@ -15,6 +15,7 @@ app.configure ->
   app.set('port', process.env.PORT || 3000)
   app.set('views', __dirname + '/views')
   app.set('view engine', 'jade')
+  app.set('view options', {debug:true})
   app.use(express.favicon())
   app.use(express.logger('dev'))
   app.use(express.cookieParser('merp'))
@@ -73,7 +74,7 @@ parseFile = (file) ->
 
 converted = parseFile "wordpress.xml"
 
-getPageOfPosts = (page) ->
+getPageOfPosts = (page, callback) ->
     data = ""
     posts = {}
     http.get "http://api.tumblr.com/v2/blog/#{base_hostname}/posts/text?api_key=#{oauth_consumer_key}&offset=#{page}&limit=20", (tumblr) ->
@@ -85,11 +86,10 @@ getPageOfPosts = (page) ->
             data += chunk
         tumblr.on 'end', () ->
             data = JSON.parse(data)
-            console.log data
-            posts.posts = data.response.posts 
-            posts.total = data.response.total_posts
-            console.log posts.total
-    posts
+            posts['posts'] = data.response.posts 
+            posts['total'] = data.response.total_posts
+            console.log "Post data received"
+            callback(posts, page)
 
 app.configure 'development', -> 
   app.use(express.errorHandler())
@@ -98,12 +98,20 @@ app.get '/sessions/cleanup', (request, response) ->
     console.log "Sending request to tumblr"
     posts = []
     offset = 0
-    first_set = getPageOfPosts(0).posts
-    for page in [0..first_set.total/20]
-        posts.push getPageOfPosts(page).posts
-    for post in posts
-        console.log post
-    
+    total_posts = 0
+    getPageOfPosts 0, (data, page) ->
+        first_set = data
+        console.log first_set.posts[0]
+        total_posts = first_set.total
+        console.log "First set of posts: #{first_set.total}"
+        total_pages = first_set.total/20
+        for page in [0..total_pages]
+            getPageOfPosts page, (data,page) ->
+                console.log "Received page #{page} of posts, current size: #{posts.length}/#{data.posts.length}"
+                for p in data.posts
+                    posts.push p
+                if posts.length == total_posts
+                    routes.cleanup(request, response, posts)
 
 app.get '/sessions/connect', (request, response) ->
   oa().getOAuthRequestToken (error, oauthToken, oauthTokenSecret, results) ->
@@ -116,6 +124,9 @@ app.get '/sessions/connect', (request, response) ->
       request.session.oauthRequestTokenSecret = oauthTokenSecret
       console.log("Redirecting")
       response.redirect("http://www.tumblr.com/oauth/authorize?oauth_token=#{request.session.oauthRequestToken}")
+
+app.post '/sessions/delete', (request, response ) ->
+    console.log request.body.id
 
 
 app.get '/callback', (request, response) ->
